@@ -356,7 +356,17 @@ func TestIsolation(t *testing.T) {
 	})
 
 	t.Run("agent cannot approve, only an administrator can", func(t *testing.T) {
-		out, code := as(t, agent, cg, "run", "deploy", "--env", "prod", "--version", "1.2.3")
+		// 本用例验证本机管理员审批，不依赖示例操作绑定的外部通知渠道
+		dir := writeAction(t, "manualapproval", "risk:\n    default: approve\n", "echo approved")
+		if out, code := as(t, root, cg, "admin", "sync", "--yes", dir); code != 0 {
+			t.Fatal(out)
+		}
+		t.Cleanup(func() {
+			if out, code := as(t, root, cg, "admin", "action", "remove", "manualapproval"); code != 0 {
+				t.Error(out)
+			}
+		})
+		out, code := as(t, agent, cg, "run", "manualapproval")
 		if code != 0 || !strings.Contains(out, "state: pending_approval") {
 			t.Fatalf("exit %d:\n%s", code, out)
 		}
@@ -382,7 +392,7 @@ func TestIsolation(t *testing.T) {
 		if code != 0 {
 			t.Fatalf("exit %d:\n%s", code, out)
 		}
-		mustContain(t, out, "state: succeeded", "approver: admin:root")
+		mustContain(t, out, "state: succeeded", "approver: admin:root", "approved")
 	})
 
 	t.Run("service user cannot change actions or configuration", func(t *testing.T) {
