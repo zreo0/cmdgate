@@ -1,0 +1,5 @@
+/cmdgate
+/dist/
+*.test
+.history/
+.DS_Store

@@ -1,0 +1,63 @@
+name: Release
+
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: read
+
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    test:
+        strategy:
+            matrix:
+                os: [ubuntu-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: go.mod
+            - run: make check test-scripts
+            - run: go test -race ./...
+
+    isolation:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  persist-credentials: false
+            - run: make test-isolation
+
+    publish:
+        needs: [test, isolation]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+            - uses: actions/setup-go@v5
+              with:
+                  go-version-file: go.mod
+            - name: Build release archives
+              env:
+                  TAG: ${{ github.ref_name }}
+              run: ./scripts/build-release.sh "$TAG"
+            - name: Publish release with commit notes
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  TAG: ${{ github.ref_name }}
+              run: |
+                  ./scripts/release-notes.sh "$TAG" > "$RUNNER_TEMP/release-notes.md"
+                  gh release create "$TAG" dist/"$TAG"/* --verify-tag --draft \
+                      --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+                  gh release edit "$TAG" --draft=false

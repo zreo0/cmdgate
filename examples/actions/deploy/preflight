@@ -1,0 +1,3 @@
+#!/bin/sh
+# preflight 不带任何凭证，只做只读检查，输出会显示在审批消息里
+echo "would deploy $CMDGATE_PARAM_VERSION to $CMDGATE_PARAM_ENV"

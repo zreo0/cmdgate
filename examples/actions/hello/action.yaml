@@ -1,0 +1,11 @@
+# 最简单的操作：不需要凭证，也不需要审批
+name: hello
+description: Print a greeting
+params:
+    name:
+        type: string
+        pattern: '[A-Za-z0-9 _-]{1,40}'
+        default: world
+        description: who to greet
+risk:
+    default: auto

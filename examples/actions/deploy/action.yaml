@@ -1,0 +1,24 @@
+# 演示用的发布操作：staging 自动通过，prod 需要审批
+# 脚本只打印将要做的事，不会真的部署任何东西
+name: deploy
+description: Deploy a released version to an environment (demo, prints only)
+params:
+    env:
+        type: enum
+        values: [staging, prod]
+    version:
+        type: string
+        pattern: 'v?\d+\.\d+\.\d+'
+        description: a released version such as 1.2.3
+risk:
+    default: approve
+    rules:
+        - when: {env: staging}
+          level: auto
+secrets: [DEPLOY_TOKEN]
+approval:
+    channel: telegram
+    timeout: 30m
+concurrency: 1
+exec:
+    timeout: 5m
