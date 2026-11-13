@@ -32,6 +32,7 @@ case $(uname -m) in
     x86_64|amd64) arch=amd64 ;;
     *) echo 'Supported architectures: arm64 and amd64.' >&2; exit 1 ;;
 esac
+printf 'Preparing cmdgate installation for %s/%s...\n' "$os" "$arch" >&2
 for tool in curl tar mktemp; do
     command -v "$tool" >/dev/null 2>&1 || { echo "Missing tool: $tool" >&2; exit 1; }
 done
@@ -44,6 +45,7 @@ else
     exit 1
 fi
 if [ "$version" = latest ]; then
+    printf 'Resolving the latest stable release...\n' >&2
     url=$(curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
         --output /dev/null --write-out '%{url_effective}' "https://github.com/$repo/releases/latest")
     case "$url" in
@@ -60,11 +62,18 @@ trap 'rm -rf "$work"' EXIT
 trap 'exit 1' HUP INT TERM
 archive="cmdgate_${version}_${os}_${arch}.tar.gz"
 base="https://github.com/$repo/releases/download/$version"
+# 交互终端显示进度条，重定向到日志时只保留阶段提示和错误
+progress=--silent
+if [ -t 2 ]; then
+    progress=--progress-bar
+fi
 for asset in "$archive" SHA256SUMS; do
-    curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+    printf 'Downloading %s...\n' "$asset" >&2
+    curl --fail "$progress" --show-error --location --proto '=https' --proto-redir '=https' \
         --output "$work/$asset" "$base/$asset"
 done
 # 只校验当前平台的文件，拒绝缺失、重复或格式不正确的校验记录
+printf 'Verifying SHA256 checksum...\n' >&2
 expected=$(awk -v name="$archive" '$2 == name {print $1}' "$work/SHA256SUMS")
 if [ "${#expected}" -ne 64 ] || ! printf '%s\n' "$expected" | LC_ALL=C grep -Eq '^[0-9a-fA-F]+$'; then
     echo "Missing or invalid checksum for $archive" >&2
@@ -80,6 +89,7 @@ if [ "$actual" != "$expected" ]; then
     exit 1
 fi
 # 只解压所需二进制，不把归档的其他路径写入文件系统
+printf 'Checksum verified. Extracting cmdgate %s...\n' "$version" >&2
 tar -xzf "$work/$archive" -C "$work" cmdgate
 if [ ! -f "$work/cmdgate" ] || [ -L "$work/cmdgate" ]; then
     echo 'Release archive does not contain a regular cmdgate binary.' >&2
@@ -95,6 +105,7 @@ if [ -n "$client_dir" ]; then
         echo 'Client destination is a directory; nothing was installed.' >&2
         exit 1
     fi
+    printf 'Installing client to %s/cmdgate...\n' "$client_dir" >&2
     mkdir -p "$client_dir"
     target=$(mktemp "$client_dir/.cmdgate.XXXXXX")
     if ! cp "$work/cmdgate" "$target" || ! chmod 755 "$target" || ! mv -f "$target" "$client_dir/cmdgate"; then
@@ -103,7 +114,10 @@ if [ -n "$client_dir" ]; then
     fi
     echo "Client installed: $client_dir/cmdgate (add $client_dir to PATH)"
 elif [ "$(id -u)" -eq 0 ]; then
+    printf 'Installing cmdgate %s and starting the system service...\n' "$version" >&2
     "$work/cmdgate" install --mode local
 else
+    printf 'Download and verification complete. Installing the system service requires sudo.\n' >&2
+    printf 'Enter your login password if prompted; password input will not be displayed.\n' >&2
     sudo "$work/cmdgate" install --mode local
 fi

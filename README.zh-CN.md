@@ -48,10 +48,10 @@ cmdgate 把需要权限的命令交给独立服务执行。Agent 提交命令和
 安装最新稳定版：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh | sh
+curl -fL --progress-bar https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh | sh
 ```
 
-[安装脚本](scripts/install.sh)会自动：
+[安装脚本](scripts/install.sh)会显示阶段提示和下载进度；系统安装会在下载、校验完成后请求 sudo 权限。脚本会自动：
 
 - 识别 macOS / Linux 和 arm64 / amd64，下载对应二进制并校验 SHA-256。
 - 通过 sudo 创建独立用户 `_cmdgate` 和系统服务，将程序安装到 `/opt/cmdgate/bin/cmdgate`，数据保存在 `/opt/cmdgate`。
@@ -67,7 +67,7 @@ Linux 默认使用 systemd。共享服务或其他部署方式见[部署指南](
 连接已有的远端服务，无需 sudo，也不创建本机服务：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
+curl -fL --progress-bar https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
     | sh -s -- --client-dir "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 cmdgate login https://your-server.example:8443
@@ -96,7 +96,7 @@ sudo cmdgate update --version v0.1.0
 将 `v0.1.0` 替换为所需的[已发布版本](https://github.com/zreo0/cmdgate/releases)：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
+curl -fL --progress-bar https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
     | sh -s -- --version v0.1.0
 ```
 

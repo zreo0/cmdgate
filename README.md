@@ -48,10 +48,10 @@ The security boundary depends on trusted administrators and command scripts, and
 Install the latest stable release:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh | sh
+curl -fL --progress-bar https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh | sh
 ```
 
-The [installer](scripts/install.sh) automatically:
+The [installer](scripts/install.sh) shows each stage and download progress. For a system installation, it requests sudo after downloading and verifying the release. It automatically:
 
 - Detects macOS / Linux and arm64 / amd64, downloads the matching binary, and verifies SHA-256.
 - Uses sudo to create the `_cmdgate` service user and system service, installs the binary at `/opt/cmdgate/bin/cmdgate`, and stores data under `/opt/cmdgate`.
@@ -67,7 +67,7 @@ Linux uses systemd by default. For shared servers and other deployment options, 
 Connect to an existing remote server without sudo or a local service:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
+curl -fL --progress-bar https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
     | sh -s -- --client-dir "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 cmdgate login https://your-server.example:8443
@@ -96,7 +96,7 @@ For an initial installation, or an older version that does not yet have `update`
 Replace `v0.1.0` with the [published version](https://github.com/zreo0/cmdgate/releases) you want:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
+curl -fL --progress-bar https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.sh \
     | sh -s -- --version v0.1.0
 ```
 
