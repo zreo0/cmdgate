@@ -69,6 +69,12 @@ func TestIsolation(t *testing.T) {
 	}
 	cg := platform.BinPath
 
+	t.Run("update requires root", func(t *testing.T) {
+		if out, code := as(t, agent, cg, "update"); code == 0 || !strings.Contains(out, "update needs sudo") {
+			t.Fatalf("unprivileged update was not rejected: %s", out)
+		}
+	})
+
 	t.Run("client PATH is installed and survives reinstall", func(t *testing.T) {
 		const config = platform.ClientPathFile
 		before, err := os.ReadFile(config)

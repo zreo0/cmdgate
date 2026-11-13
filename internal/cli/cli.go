@@ -42,6 +42,7 @@ Developing actions:
 
 Administration (needs sudo on an installed system):
   install --mode local|server [--listen addr] [--no-service]
+  update [--version vX.Y.Z]          Update the installed binary and restart its service
   uninstall [--purge]
   admin sync [--yes] <dir>           Install or update actions from a directory
   admin action list|show <name>|remove <name>
@@ -122,6 +123,8 @@ func dispatch(cmd string, args []string) error {
 		return cmdServe(args)
 	case "install":
 		return cmdInstall(args)
+	case "update":
+		return cmdUpdate(args)
 	case "uninstall":
 		return cmdUninstall(args)
 	case "admin":

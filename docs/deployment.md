@@ -42,11 +42,26 @@ sudo ./cmdgate install --mode local
 
 安装后打开新的登录 shell，即可直接运行 `cmdgate`。macOS 依靠 `path_helper` 加载配置，Linux 依靠登录环境加载 `/etc/profile.d`；不加载这些配置的 shell 或 Agent 运行器仍需在其环境中设置 PATH。已经运行的终端和 Agent 不会自动获得新的环境，应从新 shell 启动。
 
-PATH 配置目录必须由 root 所有且普通用户不可写，配置文件使用 `0644` 权限。重复安装不会追加重复内容；遇到同名自定义文件、符号链接或不安全权限时拒绝覆盖。安装器不修改个人 shell 文件、不创建 `/usr/local/bin` 快捷入口。服务启动路径和脚本的固定 PATH 保持不变。管理操作始终使用上面的绝对路径，避免从用户可写目录加载同名程序。升级已有安装时重新运行 `install`，让系统服务切换到受保护的二进制路径；Linux 上已有服务还需执行 `sudo systemctl restart cmdgate`。
+PATH 配置目录必须由 root 所有且普通用户不可写，配置文件使用 `0644` 权限。重复安装不会追加重复内容；遇到同名自定义文件、符号链接或不安全权限时拒绝覆盖。安装器不修改个人 shell 文件、不创建 `/usr/local/bin` 快捷入口。服务启动路径和脚本的固定 PATH 保持不变。管理操作始终使用上面的绝对路径，避免从用户可写目录加载同名程序。
 
 服务端只监听 `/opt/cmdgate/run/cmdgate.sock`，不开任何网络端口。
 
 没有 systemd 的环境（如容器）加 `--no-service`，然后自己以 `_cmdgate` 用户启动 `cmdgate serve`。
+
+### 更新
+
+local 和 server 模式均在运行服务的机器上执行：
+
+```bash
+sudo /opt/cmdgate/bin/cmdgate update
+sudo /opt/cmdgate/bin/cmdgate update --version v0.1.0
+```
+
+默认从官方 GitHub Releases 选择最新稳定版；指定版本必须是已发布的 `vX.Y.Z`。更新会校验对应平台归档的 SHA256，在 root 管理的目录中暂存并原子替换 `/opt/cmdgate/bin/cmdgate`，然后重启已有的 systemd 或 launchd 服务。更新期间拒绝另一个 `update`，不重新执行安装、不修改配置、数据目录、服务定义或系统 PATH，因此会保留 server 模式的监听地址、TLS 和自定义数据目录。
+
+请在没有操作执行时更新，重启会中断正在执行的操作。对于 `--no-service` 安装，命令只替换二进制并提示自行重启。下载或校验失败不会替换旧程序或重启服务；替换后重启失败会返回错误，新程序仍保留在磁盘上。修复后可在 Linux 执行 `sudo systemctl restart cmdgate`，在 macOS 执行 `sudo launchctl kickstart -k system/com.cmdgate.server`。
+
+此命令不提供客户端自更新，也不通过远端连接升级服务。客户端继续使用原 `--client-dir` 运行安装脚本。旧版本没有 `update` 命令时，先通过 README 中的安装脚本升级；Linux 上使用脚本升级已有服务后需手动重启。指定旧版本不迁移或回滚数据，降级前需自行确认数据兼容性。
 
 ### 配置审批渠道
 

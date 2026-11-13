@@ -59,6 +59,8 @@ curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.
 
 Linux 默认使用 systemd。共享服务或其他部署方式见[部署指南](docs/deployment.md)。
 
+> 下文管理员命令统一使用 `sudo cmdgate`，须确保它指向受保护的 `/opt/cmdgate/bin/cmdgate`。若 sudo 找不到命令或指向其他程序，请使用完整路径，例如 `sudo /opt/cmdgate/bin/cmdgate update`。
+
 <details>
 <summary>只安装客户端</summary>
 
@@ -78,6 +80,19 @@ cmdgate login https://your-server.example:8443
 <details>
 <summary>安装指定版本与升级</summary>
 
+已有系统安装可更新到最新稳定版，也可指定版本：
+
+```bash
+sudo cmdgate update
+sudo cmdgate update --version v0.1.0
+```
+
+将 `v0.1.0` 替换为所需的已发布版本。命令会下载对应平台的官方发布包，校验 SHA256，原子替换二进制，并重启已注册的 systemd 或 launchd 服务。现有配置、凭证、操作和请求历史都会保留，不改写服务定义及 PATH 配置。使用 `--no-service` 安装时，需自行重启手动管理的服务。请在没有操作执行时更新，服务重启会中断正在执行的操作。
+
+下载或校验失败时保留旧二进制；替换后若重启失败，命令报错并保留新二进制，需要修复服务后手动重启。此命令更新本机的系统安装，不更新远端服务或仅安装的客户端。
+
+首次安装，或旧版本尚无 `update` 命令时，使用安装脚本：
+
 将 `v0.1.0` 替换为所需的[已发布版本](https://github.com/zreo0/cmdgate/releases)：
 
 ```bash
@@ -85,7 +100,7 @@ curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.
     | sh -s -- --version v0.1.0
 ```
 
-再次运行不带版本参数的安装命令即可更新二进制，已有配置和数据会保留。Linux 上已有服务还需执行 `sudo systemctl restart cmdgate` 以加载新版本。
+省略 `--version` 即安装最新稳定版，已有配置和数据会保留。通过安装脚本升级 Linux 上已有服务后，还需执行 `sudo systemctl restart cmdgate`。仅安装客户端时，使用原来的 `--client-dir` 再次运行客户端安装命令。
 
 </details>
 
@@ -114,7 +129,7 @@ sudo cmdgate secret set DEPLOY_TOKEN     # 保存命令需要的凭证，交互�
 sudo cmdgate admin doctor                # 检查权限、命令、凭证和渠道
 ```
 
-> 若 `cmdgate` 或 `sudo cmdgate` 提示找不到命令，可使用完整路径，如 `sudo /opt/cmdgate/bin/cmdgate admin doctor`；管理员命令应解析到这个受保护的程序。从新终端启动 Agent，不加载系统 PATH 的运行器配置见[部署指南](docs/deployment.md)。
+> 从新终端启动 Agent，不加载系统 PATH 的运行器配置见[部署指南](docs/deployment.md)。
 
 把生产凭证从 `.env`、`~/.aws` 等 Agent 可读位置移走。审批账号也应放在 Agent 无法操作的环境中，例如独立手机。
 

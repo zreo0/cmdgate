@@ -59,6 +59,8 @@ The [installer](scripts/install.sh) automatically:
 
 Linux uses systemd by default. For shared servers and other deployment options, see the [deployment guide](docs/deployment.md).
 
+> Administrator commands below use `sudo cmdgate`, which must resolve to the protected binary at `/opt/cmdgate/bin/cmdgate`. If sudo cannot find it or resolves to another program, use the full path, for example `sudo /opt/cmdgate/bin/cmdgate update`.
+
 <details>
 <summary>Install only the client</summary>
 
@@ -78,6 +80,19 @@ Enter the token provided by your administrator. Client-only installation does no
 <details>
 <summary>Install a specific version or upgrade</summary>
 
+For an existing system installation, update to the latest stable release or select a version:
+
+```bash
+sudo cmdgate update
+sudo cmdgate update --version v0.1.0
+```
+
+Replace `v0.1.0` with the desired published version. The command downloads the matching official release, verifies SHA-256, atomically replaces the binary, and restarts the registered systemd or launchd service. Existing configuration, credentials, actions, and request history are retained; service definitions and PATH settings are left intact. With a `--no-service` installation, restart your manually managed server yourself. Run updates when no actions are executing, since a service restart interrupts them.
+
+Download or validation failures leave the old binary in place. If restarting fails after replacement, the command reports an error and leaves the new binary installed; fix the service and restart it manually. This command updates the local system installation, not a remote server or a client-only binary.
+
+For an initial installation, or an older version that does not yet have `update`, use the installer:
+
 Replace `v0.1.0` with the [published version](https://github.com/zreo0/cmdgate/releases) you want:
 
 ```bash
@@ -85,7 +100,7 @@ curl -fsSL https://raw.githubusercontent.com/zreo0/cmdgate/main/scripts/install.
     | sh -s -- --version v0.1.0
 ```
 
-Run the installer again without a version argument to update the binary. Existing configuration and data are retained. On Linux, run `sudo systemctl restart cmdgate` to load the new version in an existing service.
+Omit `--version` to install the latest stable release. Existing configuration and data are retained. When upgrading an existing Linux service through the installer, run `sudo systemctl restart cmdgate` afterward. For a client-only installation, rerun the client installation command with the original `--client-dir`.
 
 </details>
 
@@ -114,7 +129,7 @@ sudo cmdgate secret set DEPLOY_TOKEN     # Store a required credential without e
 sudo cmdgate admin doctor                # Check permissions, commands, credentials and channels
 ```
 
-> If `cmdgate` or `sudo cmdgate` is not found, use the full path, for example `sudo /opt/cmdgate/bin/cmdgate admin doctor`. Administrator commands should resolve to this protected binary. Start agents from a new terminal; see the [deployment guide](docs/deployment.md) for runners that do not load the system PATH.
+> Start agents from a new terminal; see the [deployment guide](docs/deployment.md) for runners that do not load the system PATH.
 
 Remove production credentials from agent-readable locations such as `.env` and `~/.aws`. Keep the approval account outside the agent's control, for example on a separate phone.
 
