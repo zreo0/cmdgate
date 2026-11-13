@@ -4,6 +4,7 @@
 package platform
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +16,11 @@ const BinPath = "/opt/cmdgate/bin/cmdgate"
 
 // run 执行一个系统命令，失败时把命令的输出带进错误里
 func run(name string, args ...string) error {
+	return runContext(context.Background(), name, args...)
+}
+
+// runContext 执行系统命令并保留退出状态，ctx 结束时终止命令
+func runContext(ctx context.Context, name string, args ...string) error {
 	// 系统管理工具多在 sbin 下，而调用者的 PATH 不一定包含它，所以先自己找出完整路径
 	path := name
 	for _, dir := range []string{"/usr/sbin", "/sbin", "/usr/bin", "/bin"} {
@@ -23,9 +29,12 @@ func run(name string, args ...string) error {
 			break
 		}
 	}
-	out, err := exec.Command(path, args...).CombinedOutput()
+	out, err := exec.CommandContext(ctx, path, args...).CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s %s: %v: %s", name, strings.Join(args, " "), err, strings.TrimSpace(string(out)))
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		}
+		return fmt.Errorf("%s %s: %w: %s", name, strings.Join(args, " "), err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }

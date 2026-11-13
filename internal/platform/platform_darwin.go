@@ -1,11 +1,15 @@
 package platform
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // ClientPathFile 是安装器管理的系统 PATH 片段位置
@@ -17,6 +21,8 @@ const clientPathContent = "/opt/cmdgate/bin\n"
 const (
 	serviceLabel = "com.cmdgate.server"
 	plistPath    = "/Library/LaunchDaemons/" + serviceLabel + ".plist"
+	// launchctl print 在目标服务不存在时返回的退出码，与 POSIX errno 不同
+	launchctlServiceNotFound = 113
 	// 系统账号使用 500 以下的 ID，从这个范围里找一个没用过的
 	minSystemID = 300
 	maxSystemID = 499
@@ -124,12 +130,47 @@ func InstallService(dataDir, user string) error {
 </dict>
 </plist>
 `, serviceLabel, BinPath, user, dataDir, dataDir, dataDir)
-	// 重复安装时先卸掉旧的
-	exec.Command("launchctl", "bootout", "system/"+serviceLabel).Run()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if err := bootoutLaunchdService(ctx, func(args ...string) error {
+		return runContext(ctx, "launchctl", args...)
+	}); err != nil {
+		return err
+	}
 	if err := os.WriteFile(plistPath, []byte(plist), 0o644); err != nil {
 		return err
 	}
 	return run("launchctl", "bootstrap", "system", plistPath)
+}
+
+// bootoutLaunchdService 等待旧服务完成移除，command 须使用同一 ctx 执行 launchctl 子命令
+//
+// bootout 返回时服务可能仍在清理，立即 bootstrap 会得到 Operation already in progress
+// 只接受 print 明确报告服务不存在，不把权限错误或其他查询失败当作卸载完成
+func bootoutLaunchdService(ctx context.Context, command func(...string) error) error {
+	target := "system/" + serviceLabel
+	if err := command("bootout", target); err != nil {
+		var exit *exec.ExitError
+		if !errors.As(err, &exit) || (exit.ExitCode() != int(syscall.ESRCH) && exit.ExitCode() != int(syscall.EINPROGRESS)) {
+			return err
+		}
+	}
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		if err := command("print", target); err != nil {
+			var exit *exec.ExitError
+			if errors.As(err, &exit) && exit.ExitCode() == launchctlServiceNotFound {
+				return nil
+			}
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("wait for removal of %s: %w", target, ctx.Err())
+		case <-ticker.C:
+		}
+	}
 }
 
 // RemoveService 停止服务并删除 launchd 配置
